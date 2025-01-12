@@ -7,6 +7,8 @@ from .ui import audio_analysis_form
 from .ui import overlay
 from .ui import audio_analysis_result
 
+from . import chat_page, navigation
+
 
 class State(rx.State):
     """The app state."""
@@ -23,6 +25,12 @@ def index() -> rx.Component:
             (sidebar.SideBarItemState.active_index == 0)
             & (~audio_analysis_form.AudioAnalysisFormState.processing_finished),
             audio_analysis_form.audio_analysis_form(),
+            rx.box(),
+        ),
+        rx.cond(
+            (sidebar.SideBarItemState.active_index == 1)
+            & (~audio_analysis_form.AudioAnalysisFormState.processing_finished),
+            chat_page.chat_page(),
             rx.box(),
         ),
         rx.cond(
@@ -57,8 +65,9 @@ app = rx.App(
     style=style,
     stylesheets=[
         "/fonts/Inter.css",
-        "/css/animation.css",
+        "/css/animation.css",  # a css animation for gradient progress bar
     ],
     theme=rx.theme(appearance="light"),
 )
 app.add_page(index)
+app.add_page(chat_page.chat_page, route=navigation.routes.CHAT_ROUTE)

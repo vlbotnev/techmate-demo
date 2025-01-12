@@ -76,21 +76,23 @@ def audio_analysis_result_right_pannel():
 
 def audio_analysis_result_buttons():
     return rx.hstack(
-        rx.el.div(
-            rx.el.div(
-                "Download result",
-                font_size="1.7em",
-            ),
-            color="white",
-            padding="1.6em 3.2em 1.6em 3.2em",
-            border_radius="10em",
-            background="linear-gradient(316.25deg, #00F0FF -86.7%, #B730F8 150.01%)",
-            _hover={
-                "background": "linear-gradient(316.25deg, rgba(0, 240, 255, 0.8) -86.7%, rgba(183, 48, 248, 0.8) 150.01%)",
-                "cursor": "pointer",
-            },
-            on_click=rx.download(url=AudioAnalysisResultState.download_link),
-        ),
+        # Temporary disabled download button until i will figure out how to download file from vpn host and not from browser
+        #
+        # rx.el.div(
+        #     rx.el.div(
+        #         "Download result",
+        #         font_size="1.7em",
+        #     ),
+        #     color="white",
+        #     padding="1.6em 3.2em 1.6em 3.2em",
+        #     border_radius="10em",
+        #     background="linear-gradient(316.25deg, #00F0FF -86.7%, #B730F8 150.01%)",
+        #     _hover={
+        #         "background": "linear-gradient(316.25deg, rgba(0, 240, 255, 0.8) -86.7%, rgba(183, 48, 248, 0.8) 150.01%)",
+        #         "cursor": "pointer",
+        #     },
+        #     on_click=rx.download(url=AudioAnalysisResultState.download_link),
+        # ),
         rx.el.div(
             rx.el.div(
                 "Start over",
