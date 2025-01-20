@@ -1,22 +1,22 @@
 import reflex as rx
 
-from . import audio_analysis_form
-from ..utils import reset_all_states
+from . import audio_analysis_form_state
+from . import reset_all_states
 
 
 def progress_bar() -> rx.Component:
     return rx.vstack(
         rx.cond(
-            audio_analysis_form.AudioAnalysisFormState.position_in_queue != 0,
+            audio_analysis_form_state.AudioAnalysisFormState.position_in_queue != 0,
             rx.vstack(
                 rx.el.div("PENDING", font_weight="700", font_size="1.6em"),
                 rx.el.div(
                     rx.el.div(
                         rx.cond(
-                            audio_analysis_form.AudioAnalysisFormState.position_in_queue
+                            audio_analysis_form_state.AudioAnalysisFormState.position_in_queue
                             == -1,
                             "Your position in queue: ",
-                            f"Your position in queue: {audio_analysis_form.AudioAnalysisFormState.position_in_queue+1}",
+                            f"Your position in queue: {audio_analysis_form_state.AudioAnalysisFormState.position_in_queue + 1}",
                         ),
                         font_size="2.4em",
                         font_weight="400",
@@ -27,13 +27,13 @@ def progress_bar() -> rx.Component:
             ),
             rx.vstack(
                 rx.el.div(
-                    f"STEP {audio_analysis_form.AudioAnalysisFormState.processing_step}",
+                    f"STEP {audio_analysis_form_state.AudioAnalysisFormState.processing_step}",
                     font_weight="700",
                     font_size="1.6em",
                 ),
                 rx.el.div(
                     rx.el.div(
-                        audio_analysis_form.AudioAnalysisFormState.processing_waiting_text,
+                        audio_analysis_form_state.AudioAnalysisFormState.processing_waiting_text,
                         font_size="2.4em",
                         font_weight="400",
                     ),
@@ -44,7 +44,7 @@ def progress_bar() -> rx.Component:
         ),
         rx.el.div(
             rx.el.div(
-                width=f"{audio_analysis_form.AudioAnalysisFormState.progress_bar_width}%",
+                width=f"{audio_analysis_form_state.AudioAnalysisFormState.progress_bar_width}%",
                 height="100%",
                 background="linear-gradient(296.22deg, #00F0FF 16.5%, #B730F8 84.26%)",
                 border_bottom_left_radius="100px",
@@ -67,10 +67,10 @@ def progress_bar() -> rx.Component:
 def overlay() -> rx.Component:
     return rx.box(
         rx.cond(
-            audio_analysis_form.AudioAnalysisFormState.processing_finished_with_error,
+            audio_analysis_form_state.AudioAnalysisFormState.processing_finished_with_error,
             rx.vstack(
                 rx.text(
-                    f"ERROR: {audio_analysis_form.AudioAnalysisFormState.processing_waiting_text}",
+                    f"ERROR: {audio_analysis_form_state.AudioAnalysisFormState.processing_waiting_text}",
                     font_size="2.4em",
                     font_weight=700,
                 ),

@@ -1,235 +1,5 @@
 import reflex as rx
-import requests
-from dotenv import load_dotenv
-import os
-from . import audio_analysis_result
-
-import time
-
-load_dotenv()
-
-
-class AudioAnalysisFormState(rx.State):
-    audiofile_name: list[str] = []
-    file_content: str
-
-    checkboxdict: dict[str, bool] = {
-        "dialogTranscribed": False,
-        "textAnalysis": False,
-        "generalRanking": False,
-        "agreements": False,
-        "score": False,
-        "grade_details": False,
-    }
-    disabled_style = {
-        "opacity": "0.3",
-        "cursor": "not-allowed",
-    }
-
-    show_options: bool = False
-    selected_language_dict: dict = {
-        "Russian": "ru",
-        "English": "en",
-        "Uzbek": "uz",
-        "Arabic": "ar",
-        "Any": "none",
-    }
-    selected_language: str = ""
-    selected_language_code: str
-
-    @rx.event
-    def handle_langselect_click(self):
-        self.show_options = not (self.show_options)
-
-    @rx.event
-    def hide_langselect_options(self):
-        if self.show_options:
-            self.show_options = False
-
-    @rx.event
-    def handle_langselect_option_click(self, value: str):
-        self.selected_language_code = self.selected_language_dict[value]
-        self.selected_language = value
-        self.show_options = not (self.show_options)
-
-    @rx.var
-    def checkbox_styles(self) -> dict:
-        return {
-            "dialogTranscribed": "",
-            "textAnalysis": ""
-            if self.checkboxdict["dialogTranscribed"]
-            else self.disabled_style,
-            "generalRanking": ""
-            if self.checkboxdict["dialogTranscribed"]
-            else self.disabled_style,
-            "agreements": ""
-            if self.checkboxdict["dialogTranscribed"]
-            else self.disabled_style,
-            "score": ""
-            if self.checkboxdict["dialogTranscribed"]
-            else self.disabled_style,
-            "grade_details": ""
-            if self.checkboxdict["dialogTranscribed"] and self.checkboxdict["score"]
-            else self.disabled_style,
-        }
-
-    @rx.event
-    def handle_checkbox_click(self, value: str):
-        if self.checkboxdict["dialogTranscribed"] and value == "dialogTranscribed":
-            self.checkboxdict = {
-                "dialogTranscribed": False,
-                "textAnalysis": False,
-                "generalRanking": False,
-                "agreements": False,
-                "score": False,
-                "grade_details": False,
-            }
-        elif self.checkboxdict["score"] and value == "score":
-            self.checkboxdict["score"] = False
-            self.checkboxdict["grade_details"] = False
-        else:
-            self.checkboxdict[value] = not (self.checkboxdict[value])
-
-    @rx.event
-    def delete_file(self):
-        rx.clear_selected_files("upload_dragndrop")
-        rx.clear_selected_files("upload_button")
-        self.audiofile_name = []
-
-    @rx.event
-    async def handle_upload(self, files: list[rx.UploadFile] = []):
-        if not files:
-            return rx.toast.error("Please drop an audiofile!")
-        else:
-            self.audiofile_name: list[str] = []
-            for file in files:
-                self.file_content = await file.read()
-                self.audiofile_name.append(file.filename)
-
-    upload_api_url = os.getenv("AUDIO_ANALYSIS_API_UPLOAD")
-    create_processing_url = os.getenv("AUDIO_ANALYSIS_API_CREATE_PROCESSING")
-    check_position_in_queue = os.getenv("AUDIO_ANALYSIS_API_CHECK_POSITION_IN_QUEUE")
-    check_processing_progress = os.getenv("AUDIO_ANALYSIS_API_CHECK_PROCESSING")
-
-    processing_started = False
-    processing_finished = False
-    processing_finished_with_error = False
-    processing_step: int = 1
-    position_in_queue: int = -1
-    processing_is_done: bool = False
-    processing_previous_status: str = ""
-    processing_step: int = 0
-    processing_waiting_text: str = "PENDING"
-    progress_bar_width: float = 0
-    response: dict
-
-    @rx.background
-    async def start_processing(self) -> dict:
-        async with self:
-            self.processing_started = True
-        response_upload = requests.post(
-            self.upload_api_url,
-            files={
-                "file": (
-                    self.audiofile_name[0],
-                    self.file_content,
-                )
-            },
-            timeout=180,
-        )
-        # print(
-        #     type(self.get_value(self.checkboxdict)),
-        #     self.get_value(self.checkboxdict),
-        # )
-        # print(type(self.selected_language_code), self.selected_language_code)
-        # print(
-        #     type(response_upload.json()["filename"]),
-        #     response_upload.json()["filename"],
-        # )
-        request_create_processing = {
-            "file_path": response_upload.json()["filename"],
-            "is_ready": False,
-            "status": "string",
-            "date": "string",
-            "message": "string",
-            "response": "string",
-            "steps_dict": self.get_value(self.checkboxdict),
-            "progress": 0,
-            "lang_code": self.selected_language_code,
-        }
-        response_create_processing = requests.post(
-            self.create_processing_url,
-            json=request_create_processing,
-        )
-        # print(response_create_processing.json()["id"])
-
-        while self.position_in_queue != 0:
-            position_in_queue_response = requests.get(
-                self.check_position_in_queue
-                + str(response_create_processing.json()["id"])
-            )
-            async with self:
-                self.position_in_queue = position_in_queue_response.json()
-            if self.position_in_queue == 0:
-                break
-            else:
-                time.sleep(3)
-
-        while not (self.processing_is_done):
-            response_check_processing = requests.get(
-                self.check_processing_progress
-                + str(response_create_processing.json()["id"])
-            )
-
-            if (
-                (response_check_processing.json()["status"])
-                != self.processing_previous_status
-            ):
-                match response_check_processing.json()["status"]:
-                    case "PENDING":
-                        async with self:
-                            self.processing_waiting_text = "Pending"
-                            self.processing_step += 1
-                            self.processing_previous_status = "PENDING"
-                    case "TRANSCRIBING":
-                        async with self:
-                            self.processing_waiting_text = "Transcribing dialog"
-                            self.processing_step += 1
-                            self.processing_previous_status = "TRANSCRIBING"
-                    case "ANALYSING":
-                        async with self:
-                            self.processing_waiting_text = "Analysing started"
-                            self.processing_step += 1
-                            self.processing_previous_status = "ANALYSING"
-                    case "DONE":
-                        async with self:
-                            self.processing_waiting_text = "Processing is done"
-                            self.processing_step += 1
-                            self.processing_previous_status = "DONE"
-                async with self:
-                    self.progress_bar_width = (
-                        response_check_processing.json()["progress"] * 100
-                    )
-
-            async with self:
-                self.processing_is_done = response_check_processing.json()["is_ready"]
-
-        if response_check_processing.json()["status"] == "ERROR":
-            async with self:
-                self.processing_finished_with_error = True
-                self.processing_waiting_text = response_check_processing.json()[
-                    "message"
-                ]
-        else:
-            async with self:
-                self.response = response_check_processing.json()
-                state = await self.get_state(
-                    audio_analysis_result.AudioAnalysisResultState
-                )
-                await state.handleClick(0, "Transcribed dialogue")
-            time.sleep(3)
-            async with self:
-                self.processing_finished = True
+from . import audio_analysis_form_state
 
 
 def audio_analysis_text() -> rx.Component:
@@ -258,7 +28,8 @@ def audio_analysis_upload() -> rx.Component:
         rx.upload(
             rx.hstack(
                 rx.cond(
-                    AudioAnalysisFormState.audiofile_name.length() == 0,
+                    audio_analysis_form_state.AudioAnalysisFormState.audiofile_name.length()
+                    == 0,
                     rx.vstack(
                         rx.el.div(
                             "Drag and drop your audio file here",
@@ -289,9 +60,9 @@ def audio_analysis_upload() -> rx.Component:
                         rx.hstack(
                             rx.el.div(
                                 rx.el.div(
-                                    AudioAnalysisFormState.audiofile_name[0].split(".")[
+                                    audio_analysis_form_state.AudioAnalysisFormState.audiofile_name[
                                         0
-                                    ],
+                                    ].split(".")[0],
                                     class_name="text1",
                                     text_overflow="ellipsis",
                                     overflow="hidden",
@@ -301,9 +72,9 @@ def audio_analysis_upload() -> rx.Component:
                             ),
                             rx.el.div(
                                 "."
-                                + AudioAnalysisFormState.audiofile_name[0].split(".")[
-                                    1
-                                ],
+                                + audio_analysis_form_state.AudioAnalysisFormState.audiofile_name[
+                                    0
+                                ].split(".")[1],
                                 class_name="text1",
                             ),
                             gap="0",
@@ -324,7 +95,7 @@ def audio_analysis_upload() -> rx.Component:
                                 "background": "#00000014",
                                 "cursor": "pointer",
                             },
-                            on_click=AudioAnalysisFormState.delete_file(),
+                            on_click=audio_analysis_form_state.AudioAnalysisFormState.delete_file(),
                         ),
                         height="4em",
                         align="center",
@@ -344,7 +115,7 @@ def audio_analysis_upload() -> rx.Component:
                         _hover={"background": "#000000CC"},
                     ),
                     no_drop=True,
-                    on_drop=AudioAnalysisFormState.handle_upload(
+                    on_drop=audio_analysis_form_state.AudioAnalysisFormState.handle_upload(
                         rx.upload_files(upload_id="sometestingtext")
                     ),
                     id="upload_button",
@@ -405,7 +176,7 @@ def audio_analysis_upload() -> rx.Component:
                 "audio/3gpp": [".3gp", ".3gpp"],
                 "audio/3gpp2": [".3g2", ".3gpp2"],
             },
-            on_drop=AudioAnalysisFormState.handle_upload(
+            on_drop=audio_analysis_form_state.AudioAnalysisFormState.handle_upload(
                 rx.upload_files(upload_id="sometestingtext")
             ),
         ),
@@ -432,7 +203,9 @@ def visualization_checkboxes_items(text: str, value: str) -> rx.Component:
         rx.vstack(
             rx.el.div(
                 rx.cond(
-                    AudioAnalysisFormState.checkboxdict[value],
+                    audio_analysis_form_state.AudioAnalysisFormState.checkboxdict[
+                        value
+                    ],
                     rx.html(
                         """
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
@@ -445,7 +218,11 @@ def visualization_checkboxes_items(text: str, value: str) -> rx.Component:
                 height="2.4em",
                 border="0.1em solid #00000066",
                 background=rx.cond(
-                    AudioAnalysisFormState.checkboxdict[value], "black", "none"
+                    audio_analysis_form_state.AudioAnalysisFormState.checkboxdict[
+                        value
+                    ],
+                    "black",
+                    "none",
                 ),
                 border_radius="0.4em",
             ),
@@ -461,10 +238,14 @@ def visualization_checkboxes_items(text: str, value: str) -> rx.Component:
         cursor="pointer",
         _hover={"background": "#00000008"},
         background=rx.cond(
-            AudioAnalysisFormState.checkboxdict[value], "#00000008", "none"
+            audio_analysis_form_state.AudioAnalysisFormState.checkboxdict[value],
+            "#00000008",
+            "none",
         ),
-        style=AudioAnalysisFormState.checkbox_styles[value],
-        on_click=AudioAnalysisFormState.handle_checkbox_click(value),
+        style=audio_analysis_form_state.AudioAnalysisFormState.checkbox_styles[value],
+        on_click=audio_analysis_form_state.AudioAnalysisFormState.handle_checkbox_click(
+            value
+        ),
     )
 
 
@@ -489,14 +270,16 @@ def language_select() -> rx.Component:
     return rx.hstack(
         rx.el.div(
             rx.cond(
-                AudioAnalysisFormState.selected_language == "",
+                audio_analysis_form_state.AudioAnalysisFormState.selected_language
+                == "",
                 "Choose language",
-                AudioAnalysisFormState.selected_language,
+                audio_analysis_form_state.AudioAnalysisFormState.selected_language,
             ),
             font_size="1.7em",
             font_wight="400",
             color=rx.cond(
-                AudioAnalysisFormState.selected_language == "",
+                audio_analysis_form_state.AudioAnalysisFormState.selected_language
+                == "",
                 "#00000033",
                 "black",
             ),
@@ -510,7 +293,9 @@ def language_select() -> rx.Component:
             width="2.4em",
             height="2.4em",
             transform=rx.cond(
-                AudioAnalysisFormState.show_options, "", "rotate(180deg)"
+                audio_analysis_form_state.AudioAnalysisFormState.show_options,
+                "",
+                "rotate(180deg)",
             ),
         ),
         padding="1.6em 1.6em 1.6em 3.2em",
@@ -521,14 +306,14 @@ def language_select() -> rx.Component:
         box_sizing="border-box",
         width="100%",
         cursor="pointer",
-        on_click=AudioAnalysisFormState.handle_langselect_click().stop_propagation,
+        on_click=audio_analysis_form_state.AudioAnalysisFormState.handle_langselect_click().stop_propagation,
     )
 
 
 def language_select_options() -> rx.Component:
     return (
         rx.cond(
-            AudioAnalysisFormState.show_options,
+            audio_analysis_form_state.AudioAnalysisFormState.show_options,
             rx.scroll_area(
                 language_select_options_items("Russian"),
                 language_select_options_items("English"),
@@ -562,16 +347,22 @@ def language_select_options_items(text: str) -> rx.Component:
         line_height="2.4em",
         border_radius="0.8em",
         background=rx.cond(
-            AudioAnalysisFormState.selected_language == text, "#F4F4F4", "none"
+            audio_analysis_form_state.AudioAnalysisFormState.selected_language == text,
+            "#F4F4F4",
+            "none",
         ),
         color=rx.cond(
-            AudioAnalysisFormState.selected_language == text, "#black", "#00000033"
+            audio_analysis_form_state.AudioAnalysisFormState.selected_language == text,
+            "#black",
+            "#00000033",
         ),
         _hover={
             "background": "#F4F4F4",
             "color": "black",
         },
-        on_click=AudioAnalysisFormState.handle_langselect_option_click(text),
+        on_click=audio_analysis_form_state.AudioAnalysisFormState.handle_langselect_option_click(
+            text
+        ),
     )
 
 
@@ -589,12 +380,14 @@ def analyze_button() -> rx.Component:
             "cursor": "pointer",
         },
         opacity=rx.cond(
-            AudioAnalysisFormState.checkboxdict["dialogTranscribed"]
-            & AudioAnalysisFormState.selected_language,
+            audio_analysis_form_state.AudioAnalysisFormState.checkboxdict[
+                "dialogTranscribed"
+            ]
+            & audio_analysis_form_state.AudioAnalysisFormState.selected_language,
             "1",
             "0.5",
         ),
-        on_click=AudioAnalysisFormState.start_processing,
+        on_click=audio_analysis_form_state.AudioAnalysisFormState.start_processing,
     )
 
 
@@ -603,7 +396,8 @@ def audio_analysis_form() -> rx.Component:
         audio_analysis_text(),
         audio_analysis_upload(),
         rx.cond(
-            AudioAnalysisFormState.audiofile_name.length() != 0,
+            audio_analysis_form_state.AudioAnalysisFormState.audiofile_name.length()
+            != 0,
             rx.vstack(
                 visualization_options(),
                 rx.grid(
@@ -627,4 +421,6 @@ def audio_analysis_form() -> rx.Component:
         gap="0em",
         paddingTop="11.8em",
         paddingLeft="48.4em",
+        height="100vh",
+        on_click=audio_analysis_form_state.AudioAnalysisFormState.hide_langselect_options(),
     )

@@ -1,50 +1,6 @@
-"""Welcome to Reflex! This file outlines the steps to create a basic app."""
-
 import reflex as rx
 
-from .ui import sidebar
-from .ui import audio_analysis_form
-from .ui import overlay
-from .ui import audio_analysis_result
-
-from . import chat_page, navigation
-
-
-class State(rx.State):
-    """The app state."""
-
-    ...
-
-
-def index() -> rx.Component:
-    # Welcome Page (Index)
-    return rx.box(
-        # rx.color_mode.button(position="top-right"),
-        sidebar.sidebar(),
-        rx.cond(
-            (sidebar.SideBarItemState.active_index == 0)
-            & (~audio_analysis_form.AudioAnalysisFormState.processing_finished),
-            audio_analysis_form.audio_analysis_form(),
-            rx.box(),
-        ),
-        rx.cond(
-            (sidebar.SideBarItemState.active_index == 1)
-            & (~audio_analysis_form.AudioAnalysisFormState.processing_finished),
-            chat_page.chat_page(),
-            rx.box(),
-        ),
-        rx.cond(
-            audio_analysis_form.AudioAnalysisFormState.processing_started,
-            rx.cond(
-                audio_analysis_form.AudioAnalysisFormState.processing_finished,
-                audio_analysis_result.audio_analysis_result(),
-                overlay.overlay(),
-            ),
-            rx.box(),
-        ),
-        on_click=audio_analysis_form.AudioAnalysisFormState.hide_langselect_options(),
-        # rx.theme_panel(default_open=True),
-    )
+from . import chat_page, navigation, audio_analysis_page
 
 
 style = {
@@ -69,5 +25,11 @@ app = rx.App(
     ],
     theme=rx.theme(appearance="light"),
 )
-app.add_page(index)
+app.add_page(
+    audio_analysis_page.page.audio_analysis_page(), route=navigation.routes.HOME_ROUTE
+)
+app.add_page(
+    audio_analysis_page.page.audio_analysis_page(),
+    route=navigation.routes.AUDIO_ANALYSIS_ROUTE,
+)
 app.add_page(chat_page.chat_page, route=navigation.routes.CHAT_ROUTE)
