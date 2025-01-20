@@ -22,8 +22,18 @@ class ChatState(rx.State):
     def user_did_submit(self) -> bool:
         return self.did_submit
 
-    # def on_load(self):
-    #     with rx.session() as session:
+    def clear_ui(self):
+        self.did_submit = False
+        self.messages = [
+            ChatMessage(
+                message="""Let's get started with the first question to understand your business:\n\n1. What product or service do you offer?""",
+                is_bot=True,
+            )
+        ]
+
+    def on_load(self):
+        print("page loaded")
+        self.clear_ui()
 
     def append_message(self, message, is_bot: bool = False):
         self.messages.append(ChatMessage(message=message, is_bot=is_bot))

@@ -32,4 +32,8 @@ app.add_page(
     audio_analysis_page.page.audio_analysis_page(),
     route=navigation.routes.AUDIO_ANALYSIS_ROUTE,
 )
-app.add_page(chat_page.chat_page, route=navigation.routes.CHAT_ROUTE)
+app.add_page(
+    chat_page.chat_page,
+    route=navigation.routes.CHAT_ROUTE,
+    on_load=chat_page.state.ChatState.on_load,
+)

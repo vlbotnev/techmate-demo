@@ -14,6 +14,7 @@ def chat_form() -> rx.Component:
             ),
             rx.hstack(
                 rx.button("submit", type="submit"),
+                rx.button("reset", type="reset", on_click=ChatState.clear_ui()),
                 rx.cond(
                     ChatState.user_did_submit,
                     rx.text("Success"),
