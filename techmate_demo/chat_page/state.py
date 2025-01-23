@@ -13,10 +13,16 @@ class ChatState(rx.State):
     did_submit: bool = False
     messages: List[ChatMessage] = [
         ChatMessage(
-            message="""Let's get started with the first question to understand your business:\n\n1. What product or service do you offer?""",
+            message="""Which language is most convenient for you to answer in?""",
             is_bot=True,
         )
     ]
+    chat_shown: bool = False
+
+    @rx.event
+    async def show_chat(self):
+        self.chat_shown = not (self.chat_shown)
+        yield
 
     @rx.var
     def user_did_submit(self) -> bool:
@@ -26,10 +32,11 @@ class ChatState(rx.State):
         self.did_submit = False
         self.messages = [
             ChatMessage(
-                message="""Let's get started with the first question to understand your business:\n\n1. What product or service do you offer?""",
+                message="""Which language is most convenient for you to answer in?""",
                 is_bot=True,
             )
         ]
+        self.chat_shown = False
 
     def on_load(self):
         print("page loaded")
@@ -45,12 +52,13 @@ class ChatState(rx.State):
                 "content": """
                 Помоги мне пожалуйста создать стратегию продаж моего продукта. 
                 Для этого последовательно задавай мне вопросы о моем бизнесе. 
-                Ты должен задавать не более одного вопроса за 1 раз. 
+                За исключением первого вопроса. В начале ты должен спросить меня на английском на какой языке мне удобнее всего отвечать.
                 Вопрос должен быть простым, не допускается вопросы типа "опишите, что это за продукт (или услуга), чем он выделяется на рынке, и какие проблемы или задачи клиентов он решает."
                 Вместо этого нужно задать последовательно несколько вопросов типа:
                 1. Какой продукт или услугу вы предлагаете?
                 2. Какие проблемы он решает
                 3. чем он выделяется на рынке?
+                Ты должен задавать не более одного вопроса за 1 раз. 
                 Каждый мой ответ оценивай по 10-ти бальной шкале и давай комментарии к оценке. Если оценка ниже 7, задавай уточняющие вопросы по этой теме, до тех пор, пока оценка не будет выше. 
                 Запрашивай информацию в виде текстовых ответов, ссылок на сайты, социальные сети, документы. 
                 Если я даю ссылку на сайт - обязательно зайди на него, проанализируй его полностью. дай оценку сайту по 10-ти бальной шкале.  
@@ -63,11 +71,11 @@ class ChatState(rx.State):
             },
             {
                 "role": "user",
-                "content": "Помоги мне пожалуйста создать стратегию продаж моего продукта",
+                "content": "Давай начнем",
             },
             {
                 "role": "assistant",
-                "content": """Let's get started with the first question to understand your business:\n\n1. What product or service do you offer?""",
+                "content": """Which language is most convenient for you to answer in?""",
             },
         ]
         for chat_message in self.messages:
