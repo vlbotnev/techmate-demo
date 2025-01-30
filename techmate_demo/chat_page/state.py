@@ -1,28 +1,23 @@
 from typing import List
 import reflex as rx
-
 from . import ai
 
 
 class ChatMessage(rx.Base):
     message: str
     is_bot: bool = False
+    attached_filename: str = None
 
 
 class ChatState(rx.State):
     did_submit: bool = False
-    messages: List[ChatMessage] = [
-        ChatMessage(
-            message="""Which language is most convenient for you to answer in?""",
-            is_bot=True,
-        )
-    ]
     chat_shown: bool = False
-
-    @rx.event
-    async def show_chat(self):
-        self.chat_shown = not (self.chat_shown)
-        yield
+    file_name: List[str] = []
+    file_content: str
+    assistant_id: int
+    thread_id: int
+    messages: List[ChatMessage]
+    llm_thinking: bool = True
 
     @rx.var
     def user_did_submit(self) -> bool:
@@ -30,70 +25,115 @@ class ChatState(rx.State):
 
     def clear_ui(self):
         self.did_submit = False
-        self.messages = [
-            ChatMessage(
-                message="""Which language is most convenient for you to answer in?""",
-                is_bot=True,
-            )
-        ]
+        yield
         self.chat_shown = False
+        yield
+        self.file_name = []
+        yield
+        self.file_content = None
+        yield
+        self.assistant_id = None
+        yield
+        self.thread_id = None
+        yield
+        self.messages = []
+        yield
 
     def on_load(self):
         print("page loaded")
         self.clear_ui()
+        yield
 
-    def append_message(self, message, is_bot: bool = False):
-        self.messages.append(ChatMessage(message=message, is_bot=is_bot))
+    @rx.event
+    def generate_agent(self):
+        self.chat_shown = not (self.chat_shown)
+        self.llm_thinking = True
+        yield
+        self.assistant_id = ai.create_assistant()
+        self.thread_id = ai.create_thread()
+        messages_data = ai.run_llm(
+            thread_id=self.thread_id, assistant_id=self.assistant_id
+        )
+        if messages_data[0] == "Error":
+            rx.toast.error("Unexpected error happend, please ")
+        else:
+            message = messages_data[0]
+            self.append_message(message=message.content[0].text.value, is_bot=True)
+            self.llm_thinking = False
+            yield
 
-    def get_gpt_messages(self):
-        gpt_messages = [
-            {
-                "role": "system",
-                "content": """
-                Помоги мне пожалуйста создать стратегию продаж моего продукта. 
-                Для этого последовательно задавай мне вопросы о моем бизнесе. 
-                За исключением первого вопроса. В начале ты должен спросить меня на английском на какой языке мне удобнее всего отвечать.
-                Вопрос должен быть простым, не допускается вопросы типа "опишите, что это за продукт (или услуга), чем он выделяется на рынке, и какие проблемы или задачи клиентов он решает."
-                Вместо этого нужно задать последовательно несколько вопросов типа:
-                1. Какой продукт или услугу вы предлагаете?
-                2. Какие проблемы он решает
-                3. чем он выделяется на рынке?
-                Ты должен задавать не более одного вопроса за 1 раз. 
-                Каждый мой ответ оценивай по 10-ти бальной шкале и давай комментарии к оценке. Если оценка ниже 7, задавай уточняющие вопросы по этой теме, до тех пор, пока оценка не будет выше. 
-                Запрашивай информацию в виде текстовых ответов, ссылок на сайты, социальные сети, документы. 
-                Если я даю ссылку на сайт - обязательно зайди на него, проанализируй его полностью. дай оценку сайту по 10-ти бальной шкале.  
-                Если я загружаю документ - обязательно прочти его и пойми его суть. Предоставь краткое саммари по документу и оценку по 10-ти бальной шкале. 
-                Твоя задача полностью понять бизнес, которым я занимаюсь. 
+    def append_message(
+        self, message, attached_filename: str = None, is_bot: bool = False
+    ):
+        self.messages.append(
+            ChatMessage(
+                message=message, is_bot=is_bot, attached_filename=attached_filename
+            )
+        )
 
-                После того, как у тебя закончатся вопросы - создай наилучшую стратегию продаж моего продукта. 
-                Задавай вопросы строго на английском и отвечай в формате markdown
-             """,
-            },
-            {
-                "role": "user",
-                "content": "Давай начнем",
-            },
-            {
-                "role": "assistant",
-                "content": """Which language is most convenient for you to answer in?""",
-            },
-        ]
-        for chat_message in self.messages:
-            role = "user"
-            if chat_message.is_bot:
-                role = "system"
-            gpt_messages.append({"role": role, "content": chat_message.message})
-        return gpt_messages
-
+    @rx.event
     async def handle_submit(self, form_data: dict):
-        print(form_data)
         user_message = form_data.get("message")
+        attached_filename = None
+        file_id = None
         if user_message:
             self.did_submit = True
-            self.append_message(user_message, is_bot=False)
+            self.llm_thinking = True
             yield
-            gpt_messages = self.get_gpt_messages()
-            bot_response = ai.get_llm_response(gpt_messages)
+            if self.file_name:
+                print(self.file_name)
+                attached_filename = self.file_name[0]
+                file_id = ai.upload_file(self.file_name[0])
+                yield
+            user_created_message = ai.create_message(
+                thread_id=self.thread_id,
+                message_content=user_message,
+                message_file_id=file_id,
+            )
+            self.append_message(
+                message=user_created_message,
+                is_bot=False,
+                attached_filename=attached_filename,
+            )
+            yield
+            messages_data = ai.run_llm(
+                thread_id=self.thread_id, assistant_id=self.assistant_id
+            )
+            if messages_data[0] == "Error":
+                rx.toast.error("Unexpected error happend, please refresh web page")
+                self.did_submit = False
+                self.llm_thinking = False
+                yield
+            else:
+                message = messages_data[0]
+                self.append_message(
+                    message=message.content[0].text.value,
+                    is_bot=True,
+                )
             self.did_submit = False
-            self.append_message(bot_response, is_bot=True)
+            self.llm_thinking = False
             yield
+        yield
+
+    @rx.event
+    async def handle_upload(self, files: list[rx.UploadFile] = []):
+        self.file_name: list[str] = []
+        self.file_content = ""
+        for file in files:
+            upload_data = await file.read()
+            outfile = rx.get_upload_dir() / file.filename
+
+            # Save the file
+            with outfile.open("wb") as file_object:
+                file_object.write(upload_data)
+            self.file_name.append(file.filename)
+            yield
+
+    @rx.event
+    def delete_file(self):
+        rx.clear_selected_files("upload_dragndrop")
+        rx.clear_selected_files("upload_button")
+        self.file_name = []
+        yield
+        self.file_content = None
+        yield

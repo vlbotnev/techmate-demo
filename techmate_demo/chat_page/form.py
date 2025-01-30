@@ -13,12 +13,99 @@ def chat_form() -> rx.Component:
                 width="100%",
             ),
             rx.hstack(
-                rx.button("submit", type="submit"),
+                rx.button(
+                    "submit",
+                    type="submit",
+                    loading=rx.cond(ChatState.llm_thinking, True, False),
+                ),
                 rx.button("reset", type="reset", on_click=ChatState.clear_ui()),
                 rx.cond(
                     ChatState.user_did_submit,
                     rx.text("Success"),
                     rx.fragment(),
+                ),
+                rx.upload(
+                    rx.hstack(
+                        rx.cond(
+                            ChatState.file_name.length() == 0,
+                            rx.vstack(),
+                            rx.hstack(
+                                rx.hstack(
+                                    rx.el.div(
+                                        rx.el.div(
+                                            ChatState.file_name[0].split(".")[0],
+                                            class_name="text1",
+                                            text_overflow="ellipsis",
+                                            overflow="hidden",
+                                            white_space="nowrap",
+                                        ),
+                                        max_width="25em",
+                                    ),
+                                    rx.el.div(
+                                        "." + ChatState.file_name[0].split(".")[1],
+                                        class_name="text1",
+                                    ),
+                                    gap="0",
+                                    align="center",
+                                ),
+                                rx.html(
+                                    """
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+                                        <path d="M20 12.0001L11.9999 20.0001" stroke="black" stroke-width="1.33333" stroke-linecap="round"/>
+                                        <path d="M20 20.0001L11.9999 12" stroke="black" stroke-width="1.33333" stroke-linecap="round"/>
+                                    </svg>
+                                    """,
+                                    background="#0000000D",
+                                    border_radius="0.4em",
+                                    width="3.2em",
+                                    height="3.2em",
+                                    _hover={
+                                        "background": "#00000014",
+                                        "cursor": "pointer",
+                                    },
+                                    on_click=ChatState.delete_file(),
+                                ),
+                                height="4em",
+                                align="center",
+                                gap="0.8em",
+                                margin_right="0.8em",
+                            ),
+                        ),
+                        rx.upload.root(
+                            rx.el.div(
+                                rx.el.div(
+                                    "Browse files",
+                                    class_name="text2",
+                                    color="white",
+                                ),
+                                background="black",
+                                padding="0.8em 1.6em 0.8em 1.6em",
+                                border_radius="1.2em",
+                                _hover={"background": "#000000CC"},
+                            ),
+                            no_drop=True,
+                            id="upload_button",
+                            _hover={
+                                "cursor": "pointer",
+                            },
+                            on_drop=ChatState.handle_upload(
+                                rx.upload_files(upload_id="sometestingtext")
+                            ),
+                        ),
+                        gap="0",
+                        align="center",
+                        lineHeight="2.4em",
+                    ),
+                    id="upload_dragndrop",
+                    border_radius="1.6em",
+                    border="0.1em dashed #00000033",
+                    padding="3.2em",
+                    multiple=False,
+                    no_click=True,
+                    no_drop=True,
+                    on_drop=ChatState.handle_upload(
+                        rx.upload_files(upload_id="sometestingtext")
+                    ),
                 ),
             ),
         ),

@@ -28,6 +28,7 @@ def message_box(chat_message: ChatMessage) -> rx.Component:
                 ),
                 **message_style,
             ),
+            rx.box(chat_message.attached_filename),
             text_align=rx.cond(chat_message.is_bot, "left", "right"),
             margin_top="1em",
         ),
@@ -83,7 +84,7 @@ def generate_strategy_button() -> rx.Component:
             "background": "linear-gradient(316.25deg, rgba(0, 240, 255, 0.8) -86.7%, rgba(183, 48, 248, 0.8) 150.01%)",
             "cursor": "pointer",
         },
-        on_click=ChatState.show_chat(),
+        on_click=ChatState.generate_agent(),
     )
 
 

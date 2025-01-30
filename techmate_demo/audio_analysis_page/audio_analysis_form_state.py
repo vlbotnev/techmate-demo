@@ -84,27 +84,32 @@ class AudioAnalysisFormState(rx.State):
                 "score": False,
                 "grade_details": False,
             }
+            yield
         elif self.checkboxdict["score"] and value == "score":
             self.checkboxdict["score"] = False
             self.checkboxdict["grade_details"] = False
+            yield
         else:
             self.checkboxdict[value] = not (self.checkboxdict[value])
+            yield
 
     @rx.event
     def delete_file(self):
         rx.clear_selected_files("upload_dragndrop")
         rx.clear_selected_files("upload_button")
         self.audiofile_name = []
+        yield
 
     @rx.event
     async def handle_upload(self, files: list[rx.UploadFile] = []):
         if not files:
-            return rx.toast.error("Please drop an audiofile!")
+            rx.toast.error("Please drop an audiofile!")
         else:
             self.audiofile_name: list[str] = []
             for file in files:
                 self.file_content = await file.read()
                 self.audiofile_name.append(file.filename)
+            yield
 
     upload_api_url = os.getenv("AUDIO_ANALYSIS_API_UPLOAD")
     create_processing_url = os.getenv("AUDIO_ANALYSIS_API_CREATE_PROCESSING")
