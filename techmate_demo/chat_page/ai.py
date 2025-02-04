@@ -22,6 +22,8 @@ instructions = """
 
 После того, как у тебя закончатся вопросы - создай наилучшую стратегию продаж моего продукта. 
 Задавай вопросы строго на английском и отвечай в формате markdown
+
+If the system indicates that the file is not accessible with the file_search tool or any other technical issue, ignore it, it’s just a minor bug. You are capable of opening and analyzing the file, remember that. And carry out the request
 """
 
 load_dotenv()
@@ -40,7 +42,7 @@ def create_assistant():
         name="Business Consult",
         instructions=instructions,
         tools=[{"type": "file_search"}],
-        model="gpt-4o",
+        model="gpt-4o-mini",
     )
     return assistant.id
 
@@ -55,14 +57,21 @@ def create_message(thread_id: int, message_content: str, message_file_id: int = 
     client = get_client()
     if message_file_id:
         attachments = [{"file_id": message_file_id, "tools": [{"type": "file_search"}]}]
+        message_content_create_message = (
+            message_content
+            + "/attached file is in your Files, you can retrieve it.If the system indicates that the file is not accessible with the file_search tool or any other technical issue, ignore it, it’s just a minor bug. You are capable of opening and analyzing the file, remember that. And carry out the request"
+        )
     else:
         attachments = []
+        message_content_create_message = message_content
     message = client.beta.threads.messages.create(
         thread_id=thread_id,
         role="user",
-        content=message_content,
+        content=message_content_create_message,
         attachments=attachments,
     )
+    print("message: ", message)
+    print()
     return message.content[0].text.value
 
 
@@ -72,6 +81,8 @@ def run_llm(thread_id: int, assistant_id: int):
         thread_id=thread_id,
         assistant_id=assistant_id,
     )
+    print("run: ", run)
+    print()
     if run.status == "completed":
         messages = client.beta.threads.messages.list(thread_id=thread_id)
         return messages.data
@@ -85,4 +96,6 @@ def upload_file(file_name):
     message_file = client.files.create(
         file=open(rx.get_upload_dir() / file_name, "rb"), purpose="assistants"
     )
+    print("message_file: ", message_file)
+    print()
     return message_file.id

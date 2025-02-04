@@ -11,20 +11,36 @@ def chat_form() -> rx.Component:
                 name="message",
                 placeholder="your message",
                 width="100%",
+                class_name="text2",
             ),
             rx.hstack(
-                rx.button(
-                    "submit",
-                    type="submit",
-                    loading=rx.cond(ChatState.llm_thinking, True, False),
+                rx.el.div(
+                    rx.button(
+                        "submit",
+                        type="submit",
+                        loading=rx.cond(ChatState.llm_thinking, True, False),
+                        class_name="text2",
+                        width="100%",
+                        height="100%",
+                    ),
+                    width="11.3em",
+                    height="4em",
+                    border_radius="1.2em",
                 ),
-                rx.button("reset", type="reset", on_click=ChatState.clear_ui()),
-                rx.cond(
-                    ChatState.user_did_submit,
-                    rx.text("Success"),
-                    rx.fragment(),
+                rx.el.div(
+                    rx.button(
+                        "reset",
+                        type="reset",
+                        on_click=ChatState.clear_ui(),
+                        class_name="text2",
+                        width="100%",
+                        height="100%",
+                    ),
+                    width="11.3em",
+                    height="4em",
+                    border_radius="1.2em",
                 ),
-                rx.upload(
+                rx.vstack(
                     rx.hstack(
                         rx.cond(
                             ChatState.file_name.length() == 0,
@@ -95,16 +111,6 @@ def chat_form() -> rx.Component:
                         gap="0",
                         align="center",
                         lineHeight="2.4em",
-                    ),
-                    id="upload_dragndrop",
-                    border_radius="1.6em",
-                    border="0.1em dashed #00000033",
-                    padding="3.2em",
-                    multiple=False,
-                    no_click=True,
-                    no_drop=True,
-                    on_drop=ChatState.handle_upload(
-                        rx.upload_files(upload_id="sometestingtext")
                     ),
                 ),
             ),

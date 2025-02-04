@@ -95,6 +95,8 @@ class ChatState(rx.State):
                 is_bot=False,
                 attached_filename=attached_filename,
             )
+            self.file_name: list[str] = []
+            self.file_content = ""
             yield
             messages_data = ai.run_llm(
                 thread_id=self.thread_id, assistant_id=self.assistant_id
