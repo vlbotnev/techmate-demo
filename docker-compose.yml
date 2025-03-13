@@ -1,13 +1,52 @@
 version: '3'
 
 services:
-  techmate-demo:
+  demo-portal:
     build:
       context: .
       dockerfile: Dockerfile
-    ports:
-      - "8800:8800"
-      - "3300:3300"
+
+    container_name: demo-portal-engine
+    hostname: demo.wizium.local
+
+#    ports:
+#      - "8800:8800"
+#      - "3300:3300"
     restart: always
+
     volumes:
       - ./techmate-demo:/app/techmate-demo
+
+    networks:
+      - demo-portal
+
+
+  nginx:
+    image: nginx:latest
+    container_name: demo-portal-nginx
+    hostname: demo.wizium.ai
+
+    environment:
+      VIRTUAL_HOST: demo.wizium.ai
+      LETSENCRYPT_HOST: demo.wizium.ai
+      LETSENCRYPT_EMAIL: vb@wizium.ai
+
+    volumes:
+      - ./nginx-conf/sites:/etc/nginx/sites-enabled
+      - ./nginx-conf/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx-logs:/var/log/nginx
+    networks:
+      - demo-portal
+      - proxy-tier
+
+#    ports:
+#      - "80:80"
+#      - "443:443"
+
+    restart: always
+
+networks:
+  demo-portal:
+    external: true
+  proxy-tier:
+    external: true
