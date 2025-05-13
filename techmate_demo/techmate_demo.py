@@ -1,6 +1,6 @@
 import reflex as rx
 
-from . import chat_page, navigation, audio_analysis_page
+from . import chat_page, navigation, audio_analysis_page, product_finder_page
 
 
 style = {
@@ -36,4 +36,8 @@ app.add_page(
     chat_page.chat_page,
     route=navigation.routes.CHAT_ROUTE,
     on_load=chat_page.state.ChatState.on_load,
+)
+app.add_page(
+    product_finder_page.page.product_finder_page(),
+    route=navigation.routes.PRODUCT_FINDER_ROUTE,
 )

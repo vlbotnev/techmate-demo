@@ -71,12 +71,40 @@ def soon_banner() -> rx.Component:
 
 def sidebar(active_index: int, disabled_index: int) -> rx.Component:
     return rx.vstack(
-        rx.image(
-            src="/logo.svg",
-            width="17.2em",
-            height="2.4em",
+        rx.el.div(
+            rx.el.div("WiziumAI", font_size="34px"),
+            # width="17.2em",
+            # height="2.4em",
             marginBottom="3.2em",
             marginTop="4.6em",
+            color="white",
+        ),
+        sidebar_item(
+            "Product Finder",
+            rx.html(
+                """
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+                        <rect x="10" y="4" width="12" height="14" rx="3" stroke="white" stroke-width="1.33333" stroke-linecap="round"/>
+                        <path d="M22.3333 21H9.66667C7.08934 21 5 23.0893 5 25.6667C5 26.9553 6.04467 28 7.33333 28H24.6667C25.9553 28 27 26.9553 27 25.6667C27 23.0893 24.9107 21 22.3333 21Z" stroke="white" stroke-linecap="round"/>
+                        <path d="M20 8V14H18.8323V8H20Z" fill="white"/>
+                        <path d="M13.2464 14H12L14.2693 8H15.7108L17.9833 14H16.7369L15.0152 9.23047H14.9649L13.2464 14ZM13.2873 11.6475H16.6865V12.5205H13.2873V11.6475Z" fill="white"/>
+                        <path d="M10 11H7" stroke="white" stroke-width="1.33333" stroke-linecap="round"/>
+                        <path d="M16 4L16 2" stroke="white" stroke-width="1.33333" stroke-linecap="round"/>
+                        <path d="M12 4L12 3" stroke="white" stroke-width="1.33333" stroke-linecap="round"/>
+                        <path d="M20 4L20 3" stroke="white" stroke-width="1.33333" stroke-linecap="round"/>
+                        <path d="M22 11L25 11" stroke="white" stroke-width="1.33333" stroke-linecap="round"/>
+                        <path d="M10 7H8" stroke="white" stroke-width="1.33333" stroke-linecap="round"/>
+                        <path d="M22 15L24 15" stroke="white" stroke-width="1.33333" stroke-linecap="round"/>
+                        <path d="M10 15H8" stroke="white" stroke-width="1.33333" stroke-linecap="round"/>
+                        <path d="M22 7L24 7" stroke="white" stroke-width="1.33333" stroke-linecap="round"/>
+                    </svg>
+                """,
+                width="3.2em",
+                height="3.2em",
+            ),
+            -1,
+            rx.cond(active_index == -1, True, False),
+            rx.cond(disabled_index == -1, True, False),
         ),
         sidebar_item(
             "Audio Analysis",
