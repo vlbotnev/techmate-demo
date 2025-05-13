@@ -102,3 +102,4 @@ wheel==0.45.1
 wrapt==1.17.0
 wsproto==1.2.0
 zipp==3.21.0
+thrift==0.15.0
